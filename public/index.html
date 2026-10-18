@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AutomateEdge FB</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* Telegram injects --tg-theme-* variables, so the page matches the user's Telegram theme. */
+    :root {
+      --accent: #1877f2;
+      --bg: var(--tg-theme-secondary-bg-color, #f2f3f7);
+      --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #ffffff));
+      --text: var(--tg-theme-text-color, #111418);
+      --hint: var(--tg-theme-hint-color, #8a8f98);
+      --sep: rgba(127, 127, 127, .18);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: var(--tg-theme-secondary-bg-color, #0f1115);
+        --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #1b1e24));
+        --text: var(--tg-theme-text-color, #eef0f3);
+        --hint: var(--tg-theme-hint-color, #8d939c);
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: var(--tg-theme-secondary-bg-color, #0f1115);
+      --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #1b1e24));
+      --text: var(--tg-theme-text-color, #eef0f3);
+      --hint: var(--tg-theme-hint-color, #8d939c);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: calc(20px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+    /* Header */
+    .hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding-top: 8px; }
+    .mark {
+      width: 76px; height: 76px; border-radius: 22px;
+      background: linear-gradient(135deg, #1877f2, #6a3df0);
+      color: #fff; font-weight: 800; font-size: 28px; letter-spacing: -1px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 10px 30px rgba(24, 119, 242, .35);
+    }
+    h1 { margin: 6px 0 0; font-size: 22px; font-weight: 700; }
+    .sub { margin: 0; color: var(--hint); max-width: 300px; }
+
+    /* Cards */
+    .card { background: var(--card); border-radius: 16px; overflow: hidden; }
+    .label { margin: 0 4px -12px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--hint); }
+
+    .primary {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; border: 0; border-radius: 14px; padding: 16px;
+      background: var(--accent); color: #fff; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer;
+    }
+    .primary:active { opacity: .85; }
+
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .tile {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 18px 6px; border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; cursor: pointer;
+    }
+    .tile:active { background: var(--sep); }
+    .tile .ic { width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center; color: #fff; }
+    .grid .tile:nth-child(-n+3) { border-bottom: 1px solid var(--sep); }
+    .grid .tile:not(:nth-child(3n)) { border-right: 1px solid var(--sep); }
+
+    .row {
+      display: flex; align-items: center; gap: 12px; width: 100%;
+      padding: 14px 16px; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+    }
+    .row + .row { border-top: 1px solid var(--sep); }
+    .row .grow { flex: 1; }
+    .row small { display: block; color: var(--hint); font-size: 13px; }
+    button.row:active { background: var(--sep); }
+
+    /* Toggle switch */
+    .switch { position: relative; width: 50px; height: 30px; flex: none; }
+    .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+    .switch span { position: absolute; inset: 0; border-radius: 15px; background: var(--sep); transition: background .2s; pointer-events: none; }
+    .switch span::after {
+      content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+      background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .2s;
+    }
+    .switch input:checked + span { background: #34c759; }
+    .switch input:checked + span::after { transform: translateX(20px); }
+
+    .note { display: flex; gap: 8px; align-items: flex-start; margin: 0 4px; color: var(--hint); font-size: 13px; }
+    .note svg { width: 16px; height: 16px; margin-top: 1px; }
+
+    /* Opening overlay */
+    .overlay {
+      position: fixed; inset: 0; z-index: 10; display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      background: var(--bg); text-align: center; padding: 16px;
+    }
+    .overlay.show { display: flex; }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--sep); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .overlay p { margin: 0; font-weight: 600; }
+    .ghost { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; padding: 10px 20px; cursor: pointer; display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="mark" aria-hidden="true">AE</div>
+      <h1 id="greeting">Welcome 👋</h1>
+      <p class="sub">Browse Facebook without leaving Telegram. Close it anytime to get back to your chats.</p>
+    </section>
+
+    <!-- Hidden inside Telegram, where Telegram's own bottom button is used instead. -->
+    <button class="primary" id="openMain">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Open Facebook
+    </button>
+
+    <p class="label">Jump to</p>
+    <section class="card grid" id="shortcuts"></section>
+
+    <p class="label">Options</p>
+    <section class="card">
+      <label class="row">
+        <span class="grow">Skip this screen<small>Go straight to Facebook next time</small></span>
+        <span class="switch"><input type="checkbox" id="skip" /><span></span></span>
+      </label>
+      <button class="row" id="openBrowser">
+        <span class="grow">Open in browser<small>Use your phone's browser or the Facebook app</small></span>
+        <svg viewBox="0 0 24 24" style="color: var(--hint)"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </section>
+
+    <p class="note">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      You sign in on facebook.com directly. AutomateEdge never sees your password.
+    </p>
+  </main>
+
+  <div class="overlay" id="overlay">
+    <div class="spinner"></div>
+    <p>Opening Facebook…</p>
+    <button class="ghost" id="cancel">Cancel</button>
+  </div>
+
+  <script>
+    var BASE = "https://m.facebook.com";
+    var SKIP_KEY = "ae_fb_skip";
+    var SKIP_DELAY_MS = 1500;
+
+    // key = deep link name (t.me/<bot>?startapp=<key>), so links can open a section directly.
+    var SHORTCUTS = [
+      { key: "feed", label: "Feed", path: "/", color: "#1877f2",
+        icon: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+      { key: "messages", label: "Messages", path: "/messages/", color: "#a033ff",
+        icon: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>' },
+      { key: "notifications", label: "Alerts", path: "/notifications/", color: "#f02849",
+        icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>' },
+      { key: "marketplace", label: "Marketplace", path: "/marketplace/", color: "#00a400",
+        icon: '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>' },
+      { key: "watch", label: "Video", path: "/watch/", color: "#ff7a00",
+        icon: '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>' },
+      { key: "groups", label: "Groups", path: "/groups/", color: "#0aa5c7",
+        icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' }
+    ];
+
+    var tg = window.Telegram && window.Telegram.WebApp;
+    var inTelegram = !!(tg && tg.initData);
+    var overlay = document.getElementById("overlay");
+    var cancelBtn = document.getElementById("cancel");
+    var pending = null;
+
+    function store(key, value) {
+      try {
+        if (value === undefined) return localStorage.getItem(key);
+        if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value);
+      } catch (e) { return null; }
+    }
+
+    function haptic() {
+      try { tg.HapticFeedback.impactOccurred("light"); } catch (e) {}
+    }
+
+    function go(path) {
+      haptic();
+      overlay.classList.add("show");
+      if (inTelegram) { try { tg.MainButton.showProgress(); } catch (e) {} }
+      // Full-page navigation: Facebook blocks iframes but allows this.
+      window.location.href = BASE + path;
+    }
+
+    // Build shortcut tiles.
+    var grid = document.getElementById("shortcuts");
+    SHORTCUTS.forEach(function (s) {
+      var b = document.createElement("button");
+      b.className = "tile";
+      b.innerHTML = '<span class="ic" style="background:' + s.color + '"><svg viewBox="0 0 24 24">' + s.icon + "</svg></span>";
+      b.appendChild(document.createTextNode(s.label));
+      b.addEventListener("click", function () { go(s.path); });
+      grid.appendChild(b);
+    });
+
+    // Greeting with the user's first name (textContent, so names can't inject HTML).
+    var user = inTelegram && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if (user && user.first_name) {
+      document.getElementById("greeting").textContent = "Hi " + user.first_name + " 👋";
+    }
+
+    // Main "Open Facebook" action: Telegram's bottom button inside Telegram, in-page button elsewhere.
+    var openMain = document.getElementById("openMain");
+    openMain.addEventListener("click", function () { go("/"); });
+    if (inTelegram) {
+      tg.ready();
+      tg.expand();
+      try { tg.setHeaderColor("secondary_bg_color"); tg.setBackgroundColor("secondary_bg_color"); } catch (e) {}
+      try {
+        tg.MainButton.setParams({ text: "Open Facebook", color: "#1877f2", text_color: "#ffffff", is_visible: true });
+        tg.MainButton.onClick(function () { go("/"); });
+        openMain.style.display = "none";
+      } catch (e) {}
+    }
+
+    // "Open in browser" leaves Telegram.
+    document.getElementById("openBrowser").addEventListener("click", function () {
+      haptic();
+      if (inTelegram) tg.openLink(BASE + "/");
+      else window.open(BASE + "/", "_blank");
+    });
+
+    // "Skip this screen" preference.
+    var skip = document.getElementById("skip");
+    skip.checked = store(SKIP_KEY) === "1";
+    skip.addEventListener("change", function () {
+      haptic();
+      store(SKIP_KEY, skip.checked ? "1" : null);
+    });
+
+    cancelBtn.addEventListener("click", function () {
+      clearTimeout(pending);
+      overlay.classList.remove("show");
+      cancelBtn.style.display = "none";
+      if (inTelegram) { try { tg.MainButton.hideProgress(); } catch (e) {} }
+    });
+
+    // On launch: deep link to a section wins; otherwise honour "skip this screen" with a short, cancellable delay.
+    var startParam = inTelegram && tg.initDataUnsafe && tg.initDataUnsafe.start_param;
+    var deep = SHORTCUTS.filter(function (s) { return s.key === startParam; })[0];
+    if (deep) {
+      go(deep.path);
+    } else if (skip.checked) {
+      overlay.classList.add("show");
+      cancelBtn.style.display = "inline-block";
+      pending = setTimeout(function () { go("/"); }, SKIP_DELAY_MS);
+    }
+  </script>
+</body>
+</html>
